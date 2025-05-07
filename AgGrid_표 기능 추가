@@ -1,0 +1,48 @@
+훌륭한 판단입니다! AgGrid는 특히 **“미달성 과제 상세 목록”**처럼 열이 많고 사용자 상호작용이 필요한 테이블에 아주 적합합니다. 말씀 주신 가이드는 이미 잘 정리돼 있어서, 바로 적용 가능한 리팩토링 예시 전체 코드만 아래에 깔끔히 정리해드릴게요.
+
+✅ AgGrid 적용 전체 코드 예시 (📋 미달성 과제 상세 목록)
+python
+복사
+편집
+# 상단 import 추가
+from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
+
+# ▶ 미달성 과제 상세 목록 출력
+st.markdown("#### 📋 미달성 과제 상세 목록")
+
+# 데이터 전처리
+미달성_과제표 = filtered_df[filtered_df["진행률"] < 100][
+    ["구분", "부서", "팀", "담당자", "과제명", "월별목표", "월별실적", "진행결과", "코멘트"]
+].reset_index(drop=True)
+
+# AgGrid 옵션 구성
+gb = GridOptionsBuilder.from_dataframe(미달성_과제표)
+gb.configure_pagination(paginationAutoPageSize=True)  # 자동 페이지네이션
+gb.configure_default_column(editable=False, filter=True, sortable=True, resizable=True)  # 기본 열 설정
+gb.configure_column("과제명", pinned="left")  # 좌측 고정 예시
+
+gridOptions = gb.build()
+
+# AgGrid 렌더링
+AgGrid(
+    미달성_과제표,
+    gridOptions=gridOptions,
+    update_mode=GridUpdateMode.NO_UPDATE,
+    fit_columns_on_grid_load=True,
+    height=400,
+    theme="balham"  # 다른 테마 옵션: 'streamlit', 'material', 'blue' 등
+)
+✅ 적용 후 기대 효과
+항목	개선 내용
+필터링	각 열 상단에 자동 생성 (Dropdown/Text 입력 가능)
+정렬	클릭으로 오름차순/내림차순 토글
+열 고정	pinned="left" 사용시 좌측 고정
+복사/선택	셀/행 복사 가능, Ctrl+C 가능
+페이지 네비게이션	자동 페이지 설정 (paginationAutoPageSize)
+
+💡 추가 팁
+팀장/담당자 기준으로 과제 내역을 필터링하고 싶은 경우, 오른쪽 열 필터를 직접 사용할 수 있어 유연한 분석 도구가 됩니다.
+
+나중에 클릭한 행의 데이터를 추적하려면 GridUpdateMode.SELECTION_CHANGED + grid_return['selected_rows'] 사용 가능합니다.
+
+필요하시면 추후 행 클릭 후 상세 내용 팝업이나, 엑셀 다운로드 버튼도 연동해드릴 수 있습니다. 바로 적용해보시겠어요?
