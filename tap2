@@ -1,0 +1,34 @@
+with tab2:
+    st.markdown("## 회의록 기반 과제 현황")
+
+    # 전체 월 보기 기본값 True
+    show_all_months = st.checkbox("🗓️ 전체 월 보기", value=True)
+
+    # 월 필터 적용
+    if not show_all_months:
+        selected_month = st.selectbox("월 선택", sorted(df["월"].unique()), key="month_tab2")
+        df_tab2 = df[df["월"] == selected_month]
+    else:
+        df_tab2 = df.copy()
+
+    # 부서 필터
+    dept_list = ["전체"] + sorted(df_tab2["부서"].dropna().unique())
+    selected_dept = st.selectbox("부서 선택", dept_list, key="dept_tab2")
+
+    # 종속 팀 필터
+    if selected_dept == "전체":
+        team_list = sorted(df_tab2["팀"].dropna().unique())
+    else:
+        team_list = sorted(df_tab2[df_tab2["부서"] == selected_dept]["팀"].dropna().unique())
+
+    selected_team = st.selectbox("팀 선택", ["전체"] + team_list, key="team_tab2")
+
+    # 필터링 적용
+    filtered_df = df_tab2.copy()
+    if selected_dept != "전체":
+        filtered_df = filtered_df[filtered_df["부서"] == selected_dept]
+    if selected_team != "전체":
+        filtered_df = filtered_df[filtered_df["팀"] == selected_team]
+
+    # 이후 filtered_df 사용
+    st.dataframe(filtered_df)
