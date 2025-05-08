@@ -1,24 +1,33 @@
 if show_all_months:
-    # ▶ 과제별 시간 흐름 보기 영역
-    st.markdown("### 📈 과제별 회의 흐름 (전체 월 기준)")
+    st.markdown("#### 📌 전체 월 기준 과제별 회의 흐름")
 
-    # 회의일 기준으로 정렬
-    sorted_df = filtered_llm.sort_values(["과제명", "회의일"])
+    grouped = filtered_llm.sort_values("회의일", ascending=False).groupby("과제명")
 
-    # 시계열 그래프를 위한 전처리
-    timeline_df = sorted_df[["과제명", "회의일", "Status"]].dropna()
-    timeline_df["회의일"] = pd.to_datetime(timeline_df["회의일"])
+    for 과제명, group in grouped:
+        st.markdown(f"##### 📂 {과제명} ({len(group)}회 회의)")
+        for _, row in group.iterrows():
+            액션텍스트 = ""
+            액션 = row["액션 아이템"]
+            if isinstance(액션, str) and 액션.strip() and 액션.strip() != "-":
+                액션텍스트 = f"""
+                <div style="
+                    display: inline-block;
+                    background-color: #E3F2FD;
+                    color: #0D47A1;
+                    font-size: 12px;
+                    padding: 6px 10px;
+                    border-radius: 6px;
+                    margin-top: 8px;
+                ">
+                <b>Action:</b> {액션}
+                </div>
+                """
 
-    fig = px.scatter(
-        timeline_df,
-        x="회의일",
-        y="과제명",
-        color="Status",
-        symbol="Status",
-        title="과제별 회의 상태 추이",
-        labels={"회의일": "회의일자", "과제명": "과제명"},
-        height=600
-    )
-    fig.update_traces(marker=dict(size=12), selector=dict(mode='markers'))
-    fig.update_layout(xaxis=dict(showgrid=True), yaxis=dict(showgrid=True))
-    st.plotly_chart(fig, use_container_width=True)
+            회의요약 = 줄바꿈_요약텍스트(row["회의 요약"])
+            st.markdown(f"""
+                <div style="border:1px solid #ddd; border-radius:8px; padding:12px; margin-bottom:10px; background-color:#FAFAFA">
+                    <b>{row['회의일']}</b> <span style="font-size:13px; color:#888;">{row['팀']} · Status: {row['Status']}</span>
+                    <br><span style="font-size: 13px; color:#444;">📝 {회의요약}</span><br>
+                    {액션텍스트}
+                </div>
+            """, unsafe_allow_html=True)
