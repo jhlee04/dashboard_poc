@@ -1,0 +1,24 @@
+if show_all_months:
+    # ▶ 과제별 시간 흐름 보기 영역
+    st.markdown("### 📈 과제별 회의 흐름 (전체 월 기준)")
+
+    # 회의일 기준으로 정렬
+    sorted_df = filtered_llm.sort_values(["과제명", "회의일"])
+
+    # 시계열 그래프를 위한 전처리
+    timeline_df = sorted_df[["과제명", "회의일", "Status"]].dropna()
+    timeline_df["회의일"] = pd.to_datetime(timeline_df["회의일"])
+
+    fig = px.scatter(
+        timeline_df,
+        x="회의일",
+        y="과제명",
+        color="Status",
+        symbol="Status",
+        title="과제별 회의 상태 추이",
+        labels={"회의일": "회의일자", "과제명": "과제명"},
+        height=600
+    )
+    fig.update_traces(marker=dict(size=12), selector=dict(mode='markers'))
+    fig.update_layout(xaxis=dict(showgrid=True), yaxis=dict(showgrid=True))
+    st.plotly_chart(fig, use_container_width=True)
