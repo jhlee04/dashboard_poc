@@ -1,0 +1,117 @@
+
+1. tab1과 tab2 구조를 st.radio() 탭으로 변경 (위치: 본문 상단)
+
+
+2. 탭에 따라 사이드바 필터를 다르게 표시
+
+
+3. tab2에서는 중점/일반 과제 모두 회의록 기반으로 표시 (CSV 파일 분리)
+
+
+
+
+---
+
+✅ 전체 코드 변화 요약
+
+① 라디오 탭 추가 (본문 상단)
+
+st.title("📋 과제 대시보드")
+
+selected_tab = st.radio(
+    label="탭 선택",
+    options=["📊 월별 정량 대시보드", "📝 회의록 기반 과제 현황"],
+    horizontal=True,
+    label_visibility="collapsed"
+)
+
+
+---
+
+② 사이드바 필터: 탭에 따라 분기
+
+with st.sidebar:
+    if selected_tab == "📊 월별 정량 대시보드":
+        st.header("📅 월별 필터")
+        selected_month = st.selectbox("월 선택", sorted(df["월"].unique()), key="month_tab1")
+    
+    elif selected_tab == "📝 회의록 기반 과제 현황":
+        st.header("🗂 회의록 필터")
+
+        selected_category = st.radio("과제 구분", ["중점과제", "일반과제"], horizontal=True, key="category_tab2")
+
+        # LLM용 데이터 파일 선택
+        file_map = {
+            "중점과제": "report_llm_core.csv",
+            "일반과제": "report_llm_general.csv"
+        }
+        llm_df = pd.read_csv(file_map[selected_category])
+
+        selected_dept = st.selectbox("부서", ["전체"] + sorted(llm_df["부서"].dropna().unique()), key="dept_tab2")
+        if selected_dept == "전체":
+            team_options = sorted(llm_df["팀"].dropna().unique())
+        else:
+            team_options = sorted(llm_df[llm_df["부서"] == selected_dept]["팀"].dropna().unique())
+        selected_team = st.selectbox("팀", ["전체"] + team_options, key="team_tab2")
+
+        filtered_task_pool = llm_df.copy()
+        if selected_dept != "전체":
+            filtered_task_pool = filtered_task_pool[filtered_task_pool["부서"] == selected_dept]
+        if selected_team != "전체":
+            filtered_task_pool = filtered_task_pool[filtered_task_pool["팀"] == selected_team]
+
+        selected_tasks = st.multiselect("📌 과제 선택", sorted(filtered_task_pool["과제명"].dropna().unique()), key="task_tab2")
+
+        show_all_meetings = st.checkbox("📆 전체 회의 흐름 보기", value=False)
+
+
+---
+
+③ 본문 내용: 탭에 따라 내용 표시
+
+if selected_tab == "📊 월별 정량 대시보드":
+    st.subheader(f"📊 정량 기반 대시보드 – {selected_month}")
+    # 여기에 기존 tab1 내용 복사 (filtered_df = df[df["월"] == selected_month] ...)
+
+elif selected_tab == "📝 회의록 기반 과제 현황":
+    st.subheader(f"📝 {selected_category} 회의록 기반 과제 현황")
+
+    # 필터 적용
+    filtered_llm = llm_df.copy()
+    if selected_dept != "전체":
+        filtered_llm = filtered_llm[filtered_llm["부서"] == selected_dept]
+    if selected_team != "전체":
+        filtered_llm = filtered_llm[filtered_llm["팀"] == selected_team]
+    if selected_tasks:
+        filtered_llm = filtered_llm[filtered_llm["과제명"].isin(selected_tasks)]
+
+    filtered_llm = filtered_llm.sort_values("회의일", ascending=False)
+    if not show_all_meetings:
+        filtered_llm = filtered_llm.drop_duplicates(subset=["과제명"], keep="first")
+
+    # 요약 출력 (당신 코드 그대로 유지)
+    if not filtered_llm.empty:
+        ...
+    else:
+        st.warning("조건에 맞는 회의록 데이터가 없습니다.")
+
+
+---
+
+✅ 구조 요약 그림
+
+[📋 과제 대시보드]          ← st.title()
+
+[ 📊 월별 정량 | 📝 회의록 기반 ]    ← st.radio()
+
+▶ 사이드바
+   └ 탭1이면 월 필터
+   └ 탭2이면 과제 구분 + 부서/팀/과제명 + 흐름보기 체크박스
+
+▶ 본문 내용
+   └ 탭1이면 KPI 시각화
+   └ 탭2이면 회의 요약, 액션 아이템
+
+
+---
+
