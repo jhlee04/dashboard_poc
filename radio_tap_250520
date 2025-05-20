@@ -115,3 +115,86 @@ elif selected_tab == "📝 회의록 기반 과제 현황":
 
 ---
 
+
+
+물론입니다! st.radio(..., horizontal=True) 자체도 기본적으로 꽤 깔끔하지만,
+디자인적으로 더 고급스럽고 탭처럼 보이게 만들고 싶다면, **CSS + st.markdown()**으로 감싸거나, custom HTML 스타일링을 사용하는 것이 가장 효과적이에요.
+
+
+---
+
+✅ 예쁘게 꾸민 horizontal radio-tab 스타일 예시
+
+1. 심플하고 탭처럼 보이는 디자인 적용
+
+st.markdown("""
+<style>
+div.radio-tabs > div {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+div.radio-tabs label {
+    background-color: #f0f0f5;
+    border: 1px solid #ccc;
+    padding: 10px 20px;
+    margin-right: 5px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 500;
+}
+div.radio-tabs input:checked + div {
+    background-color: #1976D2 !important;
+    color: white;
+}
+</style>
+""", unsafe_allow_html=True)
+
+with st.container():
+    st.markdown("<div class='radio-tabs'>", unsafe_allow_html=True)
+    selected_tab = st.radio(
+        label="탭 선택",
+        options=["📊 월별 정량 대시보드", "📝 회의록 기반 과제 현황"],
+        horizontal=True,
+        label_visibility="collapsed",
+        key="radio_tab"
+    )
+    st.markdown("</div>", unsafe_allow_html=True)
+
+이 코드는:
+
+배경색, 폰트, 패딩, 선택 시 색상 강조 등을 적용해서 진짜 탭처럼 보이게 해줍니다.
+
+선택된 항목 강조 색도 #1976D2처럼 당신의 대시보드 색감에 맞게 지정 가능.
+
+
+
+---
+
+2. 더 고급스럽게 - 선택된 탭에 그림자 효과 등 추가
+
+원하시면 아래와 같은 스타일도 가능:
+
+box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+transform: scale(1.02);
+transition: all 0.2s ease-in-out;
+
+선택된 radio 요소를 감싸는 <div>에 위 스타일을 적용하면, 애니메이션 있는 탭 느낌도 줄 수 있어요.
+
+
+---
+
+✅ 요약: 디자인 개선 전략
+
+요소	적용 예시
+
+폰트 & 패딩	padding: 10px 20px; font-weight: 500;
+선택 강조	background-color, color, box-shadow
+탭처럼 보이게	display: flex; justify-content: center; border-radius
+애니메이션 효과	transition, transform, hover 효과
+
+
+
+---
+
+
