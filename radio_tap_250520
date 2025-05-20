@@ -243,7 +243,32 @@ selected_tab = st.radio(
 
 
 
-# ✅ Streamlit 버튼 탭 + 사이드바 분기 예제 (정량/회의록) import streamlit as st import pandas as pd # 예시 데이터 sample_df = pd.DataFrame({ "월": ["2025-03", "2025-04", "2025-05"], "부서": ["TCAD", "설계", "공정"], "팀": ["A", "B", "C"], "과제명": ["과제1", "과제2", "과제3"], "회의일": ["2025-05-01", "2025-05-08", "2025-05-10"], }) # 1. 세션 상태 초기화 if "active_tab" not in st.session_state: st.session_state.active_tab = "정량" # 2. 탭 버튼 UI col1, col2 = st.columns(2) with col1: if st.button("📊 정량 대시보드", type="primary" if st.session_state.active_tab == "정량" else "secondary"): st.session_state.active_tab = "정량" with col2: if st.button("📝 회의록 대시보드", type="primary" if st.session_state.active_tab == "회의록" else "secondary"): st.session_state.active_tab = "회의록" st.markdown("---") # 3. 탭에 따라 사이드바 분기 with st.sidebar: if st.session_state.active_tab == "정량": st.header("📅 월 필터") selected_month = st.selectbox("월 선택", sorted(sample_df["월"].unique()), key="month_tab1") elif st.session_state.active_tab == "회의록": st.header("🗂 회의록 필터") selected_category = st.radio("과제 구분", ["중점과제", "일반과제"], horizontal=True) selected_dept = st.selectbox("부서 선택", ["전체"] + sorted(sample_df["부서"].unique())) selected_team = st.selectbox("팀 선택", ["전체"] + sorted(sample_df["팀"].unique())) selected_tasks = st.multiselect("과제 선택", sorted(sample_df["과제명"].unique())) show_all = st.checkbox("📆 전체 회의 보기", value=False) # 4. 본문 영역 분기 if st.session_state.active_tab == "정량": st.subheader(f"📊 [{selected_month}] 정량 대시보드") # 여기에 KPI 및 진행률 그래프 삽입 가능 else: st.subheader(f"📝 회의록 대시보드 - {selected_category}") st.write(f"선택된 부서: {selected_dept}, 팀: {selected_team}") st.write(f"과제 선택: {selected_tasks if selected_tasks else '전체'}") st.write("회의 흐름 보기:", "전체" if show_all else "최신 회의만") 
+✅ Streamlit 버튼 탭 + 사이드바 분기 예제 (정량/회의록)
+
+import streamlit as st import pandas as pd
+
+예시 데이터
+
+sample_df = pd.DataFrame({ "월": ["2025-03", "2025-04", "2025-05"], "부서": ["TCAD", "설계", "공정"], "팀": ["A", "B", "C"], "과제명": ["과제1", "과제2", "과제3"], "회의일": ["2025-05-01", "2025-05-08", "2025-05-10"], })
+
+1. 세션 상태 초기화
+
+if "active_tab" not in st.session_state: st.session_state.active_tab = "정량"
+
+2. 탭 버튼 UI
+
+col1, col2 = st.columns(2) with col1: if st.button("📊 정량 대시보드", type="primary" if st.session_state.active_tab == "정량" else "secondary"): st.session_state.active_tab = "정량" with col2: if st.button("📝 회의록 대시보드", type="primary" if st.session_state.active_tab == "회의록" else "secondary"): st.session_state.active_tab = "회의록"
+
+st.markdown("---")
+
+3. 탭에 따라 사이드바 분기
+
+with st.sidebar: if st.session_state.active_tab == "정량": st.header("📅 월 필터") selected_month = st.selectbox("월 선택", sorted(sample_df["월"].unique()), key="month_tab1") elif st.session_state.active_tab == "회의록": st.header("🗂 회의록 필터") selected_category = st.radio("과제 구분", ["중점과제", "일반과제"], horizontal=True) selected_dept = st.selectbox("부서 선택", ["전체"] + sorted(sample_df["부서"].unique())) selected_team = st.selectbox("팀 선택", ["전체"] + sorted(sample_df["팀"].unique())) selected_tasks = st.multiselect("과제 선택", sorted(sample_df["과제명"].unique())) show_all = st.checkbox("📆 전체 회의 보기", value=False)
+
+4. 본문 영역 분기
+
+if st.session_state.active_tab == "정량": st.subheader(f"📊 [{selected_month}] 정량 대시보드") # 여기에 KPI 및 진행률 그래프 삽입 가능 else: st.subheader(f"📝 회의록 대시보드 - {selected_category}") st.write(f"선택된 부서: {selected_dept}, 팀: {selected_team}") st.write(f"과제 선택: {selected_tasks if selected_tasks else '전체'}") st.write("회의 흐름 보기:", "전체" if show_all else "최신 회의만")
+
 
 완료했습니다!
 지금 열려 있는 코드는 다음 기능을 하나의 깔끔한 구조로 통합했습니다:
