@@ -1,3 +1,158 @@
+좋습니다!
+아래는 요청하신 대로 1) LLM이 상태(Status)를 분류할 뿐 아니라, 그 이유도 함께 출력하도록 프롬프트를 확장하고,
+2) 예시(few-shot)를 포함해 정확도를 높이는 형태로 튜닝한 코드 구조입니다.
+
+
+---
+
+✅ 프롬프트 구성 요소
+
+상태 기준 명시
+
+예시 3개 (다양한 유형 포함)
+
+입력 회의 요약 삽입
+
+출력 형식 명시 (상태 + 이유)
+
+
+
+---
+
+✅ 프롬프트 생성 함수 (예시 포함 + 이유 요청)
+
+def make_prompt(summary_text):
+    return f"""
+당신은 회의 요약을 보고 과제 상태를 분류하고, 그 이유를 설명하는 운영 전문가입니다.
+
+다음 상태 중 하나를 선택하세요:
+- On-track: 계획대로 진행 중이며 특별한 이슈 없음
+- Risk: 일정 지연, 기능 누락, 반복 이슈 등 리스크 징후 있음
+- Pending: 결론 유보, 결정 미정, 자료 부족 등으로 판단 보류
+
+다음은 예시입니다:
+
+[예시1]
+회의 요약: "기능 구현 완료, 내부 테스트 성공. 별다른 이슈 없음."
+→ 상태: On-track  
+→ 이유: 모든 기능이 완료되고 테스트까지 완료되어 문제 없음
+
+[예시2]
+회의 요약: "기능 일부 누락되어 다음 주 추가 반영 예정. 일정 지연 우려."
+→ 상태: Risk  
+→ 이유: 기능 누락 및 일정 리스크가 명확하게 언급됨
+
+[예시3]
+회의 요약: "기술 방향은 논의 중이나 결정 미정. 추후 자료 검토 후 방향성 확정 예정."
+→ 상태: Pending  
+→ 이유: 결론이 유보되어 다음 회의로 판단이 미뤄졌음
+
+이제 아래 회의 요약을 바탕으로 상태를 분류하고, 이유를 작성하세요:
+
+[회의 요약]
+\"\"\"{summary_text}\"\"\"
+
+→ 상태:
+→ 이유:
+"""
+
+
+---
+
+✅ 전체 파이썬 코드 흐름 (갱신된 버전)
+
+import pandas as pd
+import requests
+import time
+
+df = pd.read_csv("회의데이터.csv")
+
+def make_prompt(summary_text):
+    return f"""..."""  # 위 예시 프롬프트 내용 삽입
+
+def call_llm(prompt):
+    url = "http://your-llm-api.local/generate"
+    payload = {
+        "prompt": prompt,
+        "temperature": 0.0,
+        "max_tokens": 100  # 이유 포함 위해 확장
+    }
+    try:
+        response = requests.post(url, json=payload)
+        result = response.json().get("response", "").strip()
+        return result
+    except Exception as e:
+        return f"ERROR: {e}"
+
+# 실행 루프
+predicted_status, predicted_reason = [], []
+
+for i, row in df.iterrows():
+    prompt = make_prompt(row["요약"])
+    result = call_llm(prompt)
+    
+    # 결과 파싱 (예: 상태와 이유 분리)
+    if "→ 상태:" in result:
+        parts = result.split("→ 상태:")[1].strip().split("→ 이유:")
+        status = parts[0].strip()
+        reason = parts[1].strip() if len(parts) > 1 else ""
+    else:
+        status, reason = "Unknown", ""
+
+    predicted_status.append(status)
+    predicted_reason.append(reason)
+    time.sleep(0.5)
+
+df["예측된 Status"] = predicted_status
+df["예측 이유"] = predicted_reason
+
+df.to_csv("status_이유포함_결과.csv", index=False)
+
+
+---
+
+✅ 이 구조의 강점
+
+요소	효과
+
+예시 기반 유도	경량 LLM에서도 패턴 학습 유도 가능
+이유 포함 출력	임원 보고 시 "왜 Risk인가?"에 대한 근거 자동화
+비교 평가 가능	기존 status와 일치 여부 평가 + 이유 타당성 검토
+
+
+
+---
+
+필요하시면:
+
+실제 사내 API 형식에 맞춰 call_llm() 조정
+
+예시 문장 표현 변경 (더 도메인에 맞게)
+
+특정 과제 유형에 특화된 Prompt 버전도 도와드릴 수 있어요.
+
+
+이대로 테스트 진행해보실 수 있을까요, 아니면 사내 API 양식 알려주실 수 있으신가요?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 이건 정말 중요한 질문이에요.
 정답은 “Yes, 가능하면 부서별 예시를 따로 만드는 것이 더 정확도 향상에 효과적”입니다.
 왜냐하면, 부서마다 회의 표현 스타일·과제 성격·우선순위 언어가 다르기 때문이에요.
