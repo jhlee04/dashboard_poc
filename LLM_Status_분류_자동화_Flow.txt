@@ -1,0 +1,132 @@
+
+# ✅ 전체 LLM 상태 분류 자동화 Flow (사내 회의록 요약 기반)
+
+## 📂 파일 구조 예시
+project/
+├── data/
+│   └── 회의요약.csv               # Input 데이터: 회의일, 부서, 팀, 과제명, 요약, 액션, status
+├── prompts/
+│   ├── 기획팀.txt
+│   ├── 기술개발팀.txt
+│   └── 운영지원팀.txt
+├── output/
+│   ├── status검토_기획팀.xlsx     # 부서별 검토용 결과물
+│   ├── status검토_기술개발팀.xlsx
+│   └── status검토_운영지원팀.xlsx
+└── main.py                        # 아래에 제공된 전체 코드
+
+---
+
+## 🧠 1. 프롬프트 생성 함수 (부서별 예시 포함)
+
+```python
+def load_examples(dept):
+    try:
+        with open(f"./prompts/{dept}.txt", "r", encoding="utf-8") as f:
+            return f.read()
+    except FileNotFoundError:
+        return ""
+
+def make_prompt(dept, summary, action):
+    examples = load_examples(dept)
+    return f"""당신은 회의 요약을 보고 상태를 분류하고, 이유를 설명하는 운영 전문가입니다.
+
+[상태 기준]
+- On-track: 계획대로 진행 중이며 이슈 없음
+- Risk: 일정 지연, 기능 누락, 반복 이슈
+- Pending: 결론 유보, 판단 미정, 정보 부족
+
+{examples}
+
+[회의 요약]
+"""{summary}"""
+
+[Action Item]
+"""{action}"""
+
+→ 상태:
+→ 이유:
+"""
+```
+
+---
+
+## 🔁 2. LLM 호출 함수
+
+```python
+import requests
+
+def call_llm(prompt):
+    url = "http://your-llm-api.local/generate"
+    payload = {
+        "prompt": prompt,
+        "temperature": 0.0,
+        "max_tokens": 100
+    }
+    try:
+        response = requests.post(url, json=payload)
+        result = response.json().get("response", "").strip()
+        return result
+    except Exception as e:
+        return f"ERROR: {e}"
+```
+
+---
+
+## 📊 3. 데이터 처리 및 결과 저장 (Excel)
+
+```python
+import pandas as pd
+import time
+
+df = pd.read_csv("./data/회의요약.csv")
+results = []
+
+for i, row in df.iterrows():
+    prompt = make_prompt(row["부서"], row["요약"], row["액션 아이템"])
+    result = call_llm(prompt)
+
+    if "→ 상태:" in result:
+        parts = result.split("→ 상태:")[1].split("→ 이유:")
+        status = parts[0].strip()
+        reason = parts[1].strip() if len(parts) > 1 else ""
+    else:
+        status, reason = "Uncertain", "정보 부족 또는 분류 실패"
+
+    results.append({
+        "회의일": row["회의일"],
+        "부서": row["부서"],
+        "팀": row["팀"],
+        "과제명": row["과제명"],
+        "요약": row["요약"],
+        "액션 아이템": row["액션 아이템"],
+        "예측 상태": status,
+        "이유": reason,
+        "분류 애매함 여부": status == "Uncertain"
+    })
+    time.sleep(0.5)
+```
+
+---
+
+## 📥 4. 부서별 Excel 출력
+
+```python
+results_df = pd.DataFrame(results)
+for dept in results_df["부서"].unique():
+    sub_df = results_df[results_df["부서"] == dept].copy()
+    sub_df["실제 상태 (수정)"] = ""
+    sub_df["코멘트"] = ""
+
+    output_path = f"./output/status검토_{dept}.xlsx"
+    with pd.ExcelWriter(output_path, engine="xlsxwriter") as writer:
+        sub_df.to_excel(writer, index=False, sheet_name="검토요청")
+```
+
+---
+
+## ✅ 기대 결과
+
+- 회의 요약 기반으로 LLM이 상태 분류 및 이유 설명
+- 부서별로 분리된 Excel 파일로 담당자에게 전달
+- 검토 결과를 반영해 향후 예시 보완 및 2차 분석 가능
