@@ -1,0 +1,115 @@
+물론입니다!
+아래는 전체 자동화 플로우에 맞춘 복사-붙여넣기 가능한 Python 코드입니다.
+입력: CSV (회의요약.csv)
+출력: 부서별 Excel (status검토_기획팀.xlsx 등)
+프롬프트: 부서별 예시 텍스트 참조 (./prompts/기획팀_v1.txt 등)
+
+import pandas as pd import requests import time import os # ✅ [1] 프롬프트 예시 불러오기 (버전 관리 포함) def load_examples(dept, version="v1"): try: with open(f"./prompts/{dept}_{version}.txt", "r", encoding="utf-8") as f: return f.read() except FileNotFoundError: return "[예시 없음]" # ✅ [2] 프롬프트 생성 함수 def make_prompt(dept, summary, action, version="v1"): examples = load_examples(dept, version) return f"""당신은 회의 요약을 보고 상태를 분류하고, 이유를 설명하는 운영 전문가입니다. [상태 기준] - On-track: 계획대로 진행 중이며 이슈 없음 - Risk: 일정 지연, 기능 누락, 반복 이슈 - Pending: 결론 유보, 판단 미정, 정보 부족 {examples} [회의 요약] \"\"\"{summary}\"\"\" [Action Item] \"\"\"{action}\"\"\" → 상태: → 이유: """ # ✅ [3] LLM 호출 함수 def call_llm(prompt): url = "http://your-llm-api.local/generate" # 사내 LLM API 주소로 수정 payload = { "prompt": prompt, "temperature": 0.0, "max_tokens": 100 } try: response = requests.post(url, json=payload) result = response.json().get("response", "").strip() return result except Exception as e: return f"ERROR: {e}" # ✅ [4] 응답 파싱 함수 def parse_response(result): if "→ 상태:" in result: parts = result.split("→ 상태:")[1].split("→ 이유:") status = parts[0].strip() reason = parts[1].strip() if len(parts) > 1 else "" else: status, reason = "Uncertain", "정보 부족 또는 분류 실패" return status, reason # ✅ [5] 메인 실행 함수 def run_status_classification(input_path, output_dir="./output", prompt_version="v1"): df = pd.read_csv(input_path) results = [] for i, row in df.iterrows(): dept = row["부서"] summary = row["요약"] action = row["액션 아이템"] prompt = make_prompt(dept, summary, action, version=prompt_version) result = call_llm(prompt) status, reason = parse_response(result) results.append({ "회의일": row["회의일"], "부서": dept, "팀": row["팀"], "과제명": row["과제명"], "요약": summary, "액션 아이템": action, "예측된 상태": status, "이유": reason, "분류 애매함 여부": status.lower() == "uncertain", "프롬프트": prompt }) time.sleep(0.5) # API rate limit 대응 result_df = pd.DataFrame(results) os.makedirs(output_dir, exist_ok=True) for dept in result_df["부서"].unique(): sub_df = result_df[result_df["부서"] == dept].copy() sub_df["실제 상태 (수정)"] = "" sub_df["코멘트"] = "" file_path = os.path.join(output_dir, f"status검토_{dept}.xlsx") with pd.ExcelWriter(file_path, engine="xlsxwriter") as writer: sub_df.to_excel(writer, index=False, sheet_name="검토요청") print("✅ 분류 및 저장 완료.") # ✅ [6] 실행 예시 # run_status_classification("./data/회의요약.csv", prompt_version="v1") 
+
+이 코드를 사용하면 프롬프트 버전 관리 + 예측 정확도 개선 + 담당자 피드백 수집 루프까지 전부 반영 가능합니다.
+
+필요하시면 기획팀_v1.txt 등 예시 파일도 같이 정리해드릴게요!
+
+import pandas as pd
+import requests
+import time
+import os
+
+# ✅ [1] 프롬프트 예시 불러오기 (버전 관리 포함)
+def load_examples(dept, version="v1"):
+    try:
+        with open(f"./prompts/{dept}_{version}.txt", "r", encoding="utf-8") as f:
+            return f.read()
+    except FileNotFoundError:
+        return "[예시 없음]"
+
+# ✅ [2] 프롬프트 생성 함수
+def make_prompt(dept, summary, action, version="v1"):
+    examples = load_examples(dept, version)
+    return f"""당신은 회의 요약을 보고 상태를 분류하고, 이유를 설명하는 운영 전문가입니다.
+
+[상태 기준]
+- On-track: 계획대로 진행 중이며 이슈 없음
+- Risk: 일정 지연, 기능 누락, 반복 이슈
+- Pending: 결론 유보, 판단 미정, 정보 부족
+
+{examples}
+
+[회의 요약]
+\"\"\"{summary}\"\"\"
+
+[Action Item]
+\"\"\"{action}\"\"\"
+
+→ 상태:
+→ 이유:
+"""
+
+# ✅ [3] LLM 호출 함수
+def call_llm(prompt):
+    url = "http://your-llm-api.local/generate"  # 사내 LLM API 주소로 수정
+    payload = {
+        "prompt": prompt,
+        "temperature": 0.0,
+        "max_tokens": 100
+    }
+    try:
+        response = requests.post(url, json=payload)
+        result = response.json().get("response", "").strip()
+        return result
+    except Exception as e:
+        return f"ERROR: {e}"
+
+# ✅ [4] 응답 파싱 함수
+def parse_response(result):
+    if "→ 상태:" in result:
+        parts = result.split("→ 상태:")[1].split("→ 이유:")
+        status = parts[0].strip()
+        reason = parts[1].strip() if len(parts) > 1 else ""
+    else:
+        status, reason = "Uncertain", "정보 부족 또는 분류 실패"
+    return status, reason
+
+# ✅ [5] 메인 실행 함수
+def run_status_classification(input_path, output_dir="./output", prompt_version="v1"):
+    df = pd.read_csv(input_path)
+    results = []
+
+    for i, row in df.iterrows():
+        dept = row["부서"]
+        summary = row["요약"]
+        action = row["액션 아이템"]
+
+        prompt = make_prompt(dept, summary, action, version=prompt_version)
+        result = call_llm(prompt)
+        status, reason = parse_response(result)
+
+        results.append({
+            "회의일": row["회의일"],
+            "부서": dept,
+            "팀": row["팀"],
+            "과제명": row["과제명"],
+            "요약": summary,
+            "액션 아이템": action,
+            "예측된 상태": status,
+            "이유": reason,
+            "분류 애매함 여부": status.lower() == "uncertain",
+            "프롬프트": prompt
+        })
+        time.sleep(0.5)  # API rate limit 대응
+
+    result_df = pd.DataFrame(results)
+    os.makedirs(output_dir, exist_ok=True)
+
+    for dept in result_df["부서"].unique():
+        sub_df = result_df[result_df["부서"] == dept].copy()
+        sub_df["실제 상태 (수정)"] = ""
+        sub_df["코멘트"] = ""
+        file_path = os.path.join(output_dir, f"status검토_{dept}.xlsx")
+        with pd.ExcelWriter(file_path, engine="xlsxwriter") as writer:
+            sub_df.to_excel(writer, index=False, sheet_name="검토요청")
+
+    print("✅ 분류 및 저장 완료.")
+
+# ✅ [6] 실행 예시
+# run_status_classification("./data/회의요약.csv", prompt_version="v1")
